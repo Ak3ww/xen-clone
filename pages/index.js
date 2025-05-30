@@ -15,18 +15,21 @@ export default function Home() {
   const [status, setStatus] = useState("");
 
   const connectWallet = async () => {
-    if (!window.ethereum) return alert("Install MetaMask");
-    const _provider = new ethers.providers.Web3Provider(window.ethereum);
-    await _provider.send("eth_requestAccounts", []);
-    const _signer = _provider.getSigner();
-    const address = await _signer.getAddress();
-    const _contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, _signer);
+  if (typeof window === 'undefined' || !window.ethereum) {
+    alert("MetaMask not available");
+    return;
+  }
+  const _provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+  await _provider.send("eth_requestAccounts", []);
+  const _signer = _provider.getSigner();
+  const address = await _signer.getAddress();
 
-    setProvider(_provider);
-    setSigner(_signer);
-    setWallet(address);
-    setContract(_contract);
-  };
+  setProvider(_provider);
+  setSigner(_signer);
+  setWallet(address);
+  setContract(new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, _signer));
+};
+
 
   const disconnectWallet = () => {
     setWallet("");
