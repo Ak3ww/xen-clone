@@ -1,136 +1,119 @@
-import { useEffect, useState } from "react";
+// pages/index.js
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { XEN_ABI } from "../abi";
-
-const CONTRACT_ADDRESS = "0x9d0bc975e1cb8895249ba11c03c08c79d158b11d";
+import { CONTRACT_ABI, CONTRACT_ADDRESS } from "../abi";
 
 export default function Home() {
+  const [wallet, setWallet] = useState("");
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [contract, setContract] = useState(null);
-  const [account, setAccount] = useState(null);
-  const [balance, setBalance] = useState("0");
-  const [rank, setRank] = useState("0");
+
   const [term, setTerm] = useState(1);
-  const [maturity, setMaturity] = useState(null);
-  const [nowTime, setNowTime] = useState(Date.now() / 1000);
+  const [globalRank, setGlobalRank] = useState(0);
+  const [userMint, setUserMint] = useState(null);
+  const [status, setStatus] = useState("");
 
-  // Live timestamp update for countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNowTime(Date.now() / 1000);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Connect Wallet + Load Data
   const connectWallet = async () => {
-    if (!window.ethereum) return alert("Please install MetaMask");
+    if (!window.ethereum) return alert("Install MetaMask");
+    const _provider = new ethers.providers.Web3Provider(window.ethereum);
+    await _provider.send("eth_requestAccounts", []);
+    const _signer = _provider.getSigner();
+    const address = await _signer.getAddress();
+    const _contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, _signer);
 
-    try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-
-      const p = new ethers.BrowserProvider(window.ethereum);
-      const s = await p.getSigner();
-      const acc = await s.getAddress();
-      const c = new ethers.Contract(CONTRACT_ADDRESS, XEN_ABI, s);
-
-      setProvider(p);
-      setSigner(s);
-      setContract(c);
-      setAccount(acc);
-
-      const bal = await c.balanceOf(acc);
-      setBalance(ethers.formatEther(bal));
-
-      const r = await c.globalRank();
-      setRank(Number(r));
-
-      const m = await c.userMints(acc);
-      if (m.rank > 0) {
-        setMaturity(Number(m.maturityTs));
-      } else {
-        setMaturity(null);
-      }
-
-    } catch (err) {
-      console.error(err);
-      alert("Wallet connection failed.");
-    }
+    setProvider(_provider);
+    setSigner(_signer);
+    setWallet(address);
+    setContract(_contract);
   };
 
-  const disconnect = () => {
-    setProvider(null);
+  const disconnectWallet = () => {
+    setWallet("");
     setSigner(null);
     setContract(null);
-    setAccount(null);
-    setBalance("0");
-    setRank("0");
-    setTerm(1);
-    setMaturity(null);
+    setUserMint(null);
+  };
+
+  const fetchData = async () => {
+    if (!contract || !wallet) return;
+    const rank = await contract.globalRank();
+    setGlobalRank(rank.toString());
+
+    try {
+      const mint = await contract.userMints(wallet);
+      if (mint.rank > 0) setUserMint(mint);
+      else setUserMint(null);
+    } catch {
+      setUserMint(null);
+    }
   };
 
   const claimRank = async () => {
-    if (!contract) return;
     try {
+      setStatus("Submitting rank...");
       const tx = await contract.claimRank(term);
       await tx.wait();
-      alert("Rank claimed!");
-      connectWallet(); // reload state
+      setStatus("Rank claimed!");
+      fetchData();
     } catch (err) {
-      console.error(err);
-      alert("Claim failed");
+      setStatus("Error claiming rank");
     }
   };
 
-  const claimMint = async () => {
-    if (!contract) return;
+  const claimReward = async () => {
     try {
+      setStatus("Claiming reward...");
       const tx = await contract.claimMintReward();
       await tx.wait();
-      alert("Mint reward claimed!");
-      connectWallet(); // reload state
+      setStatus("Reward claimed!");
+      fetchData();
     } catch (err) {
-      console.error(err);
-      alert("Claim failed");
+      setStatus("Error claiming reward");
     }
   };
 
-  const timeLeft = maturity ? Math.max(0, maturity - nowTime) : 0;
+  useEffect(() => {
+    if (wallet) fetchData();
+  }, [wallet]);
 
   return (
-    <div className="container">
-      <h1>XEN Crypto Dashboard</h1>
+    <div style={{ fontFamily: "Arial", padding: "2rem", maxWidth: "500px", margin: "auto" }}>
+      <h2>XEN Crypto Clone Dashboard</h2>
 
-      {!account ? (
+      {!wallet ? (
         <button onClick={connectWallet}>Connect Wallet</button>
       ) : (
         <>
-          <p><strong>Wallet:</strong> {account.slice(0, 6)}...{account.slice(-4)}</p>
-          <p><strong>Balance:</strong> {balance} XEN</p>
-          <p><strong>Global Rank:</strong> {rank}</p>
+          <p>Connected: {wallet.slice(0, 6)}...{wallet.slice(-4)}</p>
+          <button onClick={disconnectWallet}>Disconnect</button>
 
-          <p><strong>Mint:</strong> {maturity ? (
-            timeLeft > 0
-              ? `⏳ ${Math.floor(timeLeft)}s remaining`
-              : "✅ Ready to claim!"
-          ) : "Not minting"}</p>
+          <hr />
+          <p><strong>Global Rank:</strong> {globalRank}</p>
 
-          <label>
-            Mint Term (days):
-            <input
-              type="number"
-              min="1"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-          </label>
+          <h4>Claim Minting Rank</h4>
+          <input
+            type="number"
+            min="1"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            style={{ marginRight: "1rem", width: "100px" }}
+          />
+          <button onClick={claimRank}>Claim Rank</button>
 
-          <div style={{ marginTop: "1rem" }}>
-            <button onClick={claimRank}>Claim Rank</button>
-            <button onClick={claimMint}>Claim Mint Reward</button>
-            <button onClick={disconnect}>Disconnect</button>
-          </div>
+          {userMint && (
+            <div style={{ marginTop: "1rem" }}>
+              <p><strong>Your Mint:</strong></p>
+              <p>Term: {userMint.term.toString()} days</p>
+              <p>Rank: {userMint.rank.toString()}</p>
+              <p>Matures: {new Date(userMint.maturityTs.toNumber() * 1000).toLocaleString()}</p>
+              <button onClick={claimReward}>Claim Mint Reward</button>
+            </div>
+          )}
+
+          {status && (
+            <p style={{ marginTop: "1rem", color: "green" }}>{status}</p>
+          )}
         </>
       )}
     </div>
