@@ -27,23 +27,31 @@ export default function Home() {
 
   // 🟡 Connect wallet
   const connectWallet = async () => {
-    try {
-      if (!window.ethereum) {
-        alert('MetaMask not installed!');
-        return;
-      }
-      const browserProvider = new BrowserProvider(window.ethereum);
-      const signer = await browserProvider.getSigner();
-      const address = await signer.getAddress();
+  if (!window.ethereum) {
+    alert("MetaMask not detected");
+    return;
+  }
 
-      setWalletAddress(address);
-      setProvider(browserProvider);
-      setSigner(signer);
-      setContract(new Contract(CONTRACT_ADDRESS, ABI, signer));
-    } catch (err) {
-      console.error('Wallet connection failed:', err);
-    }
-  };
+  try {
+    // 🟡 This triggers MetaMask popup
+    const accounts = await window.ethereum.request({
+      method: 'eth_requestAccounts',
+    });
+
+    const browserProvider = new BrowserProvider(window.ethereum);
+    const signer = await browserProvider.getSigner();
+    const address = await signer.getAddress();
+
+    setWalletAddress(address);
+    setProvider(browserProvider);
+    setSigner(signer);
+    setContract(new Contract(CONTRACT_ADDRESS, ABI, signer));
+  } catch (err) {
+    console.error("Connection failed:", err);
+    alert("Failed to connect wallet.");
+  }
+};
+
 
   const disconnectWallet = () => {
     setWalletAddress('');
