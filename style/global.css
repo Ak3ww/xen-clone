@@ -1,23 +1,71 @@
-/* style/global.css */
+/* global.css */
+
 body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  background: #f4f4f4;
+  background-color: #f9fafb;
+  color: #111;
 }
+
 button {
-  padding: 8px 16px;
-  background: black;
-  color: white;
+  background-color: #111;
+  color: #fff;
   border: none;
-  border-radius: 6px;
+  padding: 10px 18px;
+  margin-top: 10px;
   cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.2s ease-in-out;
 }
+
 button:hover {
-  opacity: 0.8;
+  background-color: #333;
 }
-input {
-  padding: 6px;
+
+input[type='number'] {
+  padding: 8px;
+  margin-top: 10px;
+  width: 80px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+h1 {
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+h3, h4 {
+  margin: 10px 0 5px;
+}
+
+p {
+  margin: 4px 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 20px;
+    text-align: center;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  input[type='number'] {
+    width: 100%;
+  }
+
+  .mint-box {
+    padding: 10px;
+    font-size: 14px;
+  }
 }
