@@ -1,1 +1,34 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #111;
+  color: #eee;
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  padding-top: 60px;
+  min-height: 100vh;
+}
 
+.container {
+  max-width: 500px;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #333;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+}
+
+button {
+  background-color: #00cc66;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: #00a653;
+}
