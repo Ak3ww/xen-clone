@@ -1,23 +1,31 @@
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  background: #f4f4f4;
-  font-family: "Segoe UI", sans-serif;
-  color: #111;
 }
 
-.container {
-  max-width: 500px;
-  margin: 0 auto;
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+  color: #111;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 1rem;
 }
 
 header {
+  width: 100%;
+  max-width: 720px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #ddd;
+  padding: 1.5rem 1rem;
+  background-color: #fff;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 header .left {
@@ -27,48 +35,51 @@ header .left {
 
 header .right {
   display: flex;
+  gap: 1rem;
   align-items: center;
-  gap: 0.5rem;
+}
+
+button {
+  background-color: #836EF9;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  background-color: #6e5de2;
 }
 
 main {
-  padding-top: 2rem;
+  width: 100%;
+  max-width: 720px;
 }
 
 .mint-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.05);
   padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   text-align: center;
 }
 
-button {
-  background: #111;
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  margin-top: 1rem;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.2s;
+.mint-card h2 {
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+  color: #333;
 }
 
-button:hover {
-  background: #333;
+.mint-card p {
+  font-size: 1rem;
+  margin: 0.5rem 0;
 }
 
-@media (max-width: 600px) {
-  .container {
-    padding: 0.5rem;
-  }
-
-  .mint-card {
-    padding: 1.5rem;
-  }
-
-  button {
-    width: 100%;
-  }
+.mint-card button {
+  margin-top: 1.5rem;
+  width: 100%;
+  font-size: 1rem;
 }
