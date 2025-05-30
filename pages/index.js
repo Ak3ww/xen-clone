@@ -1,70 +1,56 @@
-import { useEffect, useState } from 'react';
-import { ethers } from 'ethers';
+import { useState, useEffect } from 'react';
+import { BrowserProvider, Contract, formatEther, parseUnits } from 'ethers';
 import abi from '../abi';
 
 const CONTRACT_ADDRESS = '0x9d0bc975e1cb8895249ba11c03c08c79d158b11d';
 const SECONDS_IN_DAY = 60;
 
-export default function Home() {
+export default function XENDashboard() {
   const [walletAddress, setWalletAddress] = useState('');
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [contract, setContract] = useState(null);
 
   const [globalRank, setGlobalRank] = useState('');
-  const [userMint, setUserMint] = useState(null);
   const [balance, setBalance] = useState('0');
+  const [userMint, setUserMint] = useState(null);
   const [rewardEstimate, setRewardEstimate] = useState('');
   const [countdown, setCountdown] = useState('');
   const [loading, setLoading] = useState(false);
 
   const connectWallet = async () => {
     if (!window.ethereum) {
-      alert("MetaMask not detected");
+      alert('Please install MetaMask');
       return;
     }
 
     try {
-      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
-      await web3Provider.send("eth_requestAccounts", []);
-      const signer = web3Provider.getSigner();
+      const browserProvider = new BrowserProvider(window.ethereum);
+      const signer = await browserProvider.getSigner();
       const address = await signer.getAddress();
-      const xen = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+      const xen = new Contract(CONTRACT_ADDRESS, abi, signer);
 
-      setProvider(web3Provider);
-      setSigner(signer);
       setWalletAddress(address);
+      setProvider(browserProvider);
+      setSigner(signer);
       setContract(xen);
-
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      if (chainId !== '0x38') {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x38' }]
-          });
-        } catch {
-          alert("Please switch to BNB Chain");
-        }
-      }
-
       fetchData(xen, address);
     } catch (err) {
-      console.error(err);
-      alert("Connection failed.");
+      console.error('Connection failed:', err);
+      alert('Failed to connect wallet');
     }
   };
 
   const disconnectWallet = () => {
     setWalletAddress('');
-    setProvider(null);
     setSigner(null);
+    setProvider(null);
     setContract(null);
     setUserMint(null);
-    setGlobalRank('');
-    setRewardEstimate('');
-    setBalance('0');
     setCountdown('');
+    setGlobalRank('');
+    setBalance('0');
+    setRewardEstimate('');
   };
 
   const fetchData = async (xen, address) => {
@@ -72,22 +58,56 @@ export default function Home() {
     setGlobalRank(rank.toString());
 
     const bal = await xen.balanceOf(address);
-    setBalance(ethers.utils.formatEther(bal));
+    setBalance(formatEther(bal));
 
     const mint = await xen.userMints(address);
     if (mint.rank > 0) {
       const maturityTs = mint.maturityTs.toNumber();
-      const rankDiff = rank.sub(mint.rank).toString();
-      setRewardEstimate(rankDiff);
+      const rankDiff = rank - mint.rank;
       setUserMint({
         term: mint.term.toString(),
         maturityTs,
         rank: mint.rank.toString()
       });
+      setRewardEstimate(rankDiff.toString());
     } else {
       setUserMint(null);
       setRewardEstimate('');
     }
+  };
+
+  const claimRank = async () => {
+    if (userMint) return alert('You already have a mint in progress');
+    try {
+      setLoading(true);
+      const tx = await contract.claimRank(1);
+      await tx.wait();
+      alert('✅ Rank Claimed');
+      fetchData(contract, walletAddress);
+    } catch (e) {
+      alert('❌ Claim failed');
+    }
+    setLoading(false);
+  };
+
+  const claimReward = async () => {
+    if (!userMint) return;
+    const now = Math.floor(Date.now() / 1000);
+    if (now < userMint.maturityTs) {
+      alert('⏳ Not matured yet');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const tx = await contract.claimMintReward();
+      await tx.wait();
+      alert('✅ Reward Claimed');
+      fetchData(contract, walletAddress);
+    } catch (e) {
+      alert('❌ Reward claim failed');
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -100,48 +120,16 @@ export default function Home() {
         const secs = (diff % 60).toString().padStart(2, '0');
         setCountdown(`${mins}:${secs}`);
       } else {
-        setCountdown("✅ Ready");
+        setCountdown('✅ Ready');
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [userMint]);
 
-  const claimRank = async () => {
-    if (userMint) return alert("You already have a mint in progress");
-    try {
-      setLoading(true);
-      const tx = await contract.claimRank(1);
-      await tx.wait();
-      alert("✅ Rank Claimed");
-      fetchData(contract, walletAddress);
-    } catch (e) {
-      alert("❌ Claim failed");
-    }
-    setLoading(false);
-  };
-
-  const claimReward = async () => {
-    const now = Math.floor(Date.now() / 1000);
-    if (!userMint || now < userMint.maturityTs) {
-      alert("⏳ Not matured yet");
-      return;
-    }
-    try {
-      setLoading(true);
-      const tx = await contract.claimMintReward();
-      await tx.wait();
-      alert("✅ Reward Claimed");
-      fetchData(contract, walletAddress);
-    } catch (e) {
-      alert("❌ Reward claim failed");
-    }
-    setLoading(false);
-  };
-
   return (
     <div className="container">
       <header>
-        <div className="left">XEN Crypto Clone</div>
+        <div className="left">XEN Clone</div>
         <div className="right">
           {!walletAddress ? (
             <button onClick={connectWallet}>Connect Wallet</button>
@@ -160,13 +148,14 @@ export default function Home() {
             <h2>Mint Free XEN</h2>
             <p><strong>Global Rank:</strong> {globalRank}</p>
             <p><strong>Balance:</strong> {balance} XEN</p>
+
             {userMint ? (
               <>
                 <p><strong>Term:</strong> {userMint.term} days</p>
                 <p><strong>Your Rank:</strong> {userMint.rank}</p>
                 <p><strong>Reward:</strong> {rewardEstimate} XEN</p>
                 <p><strong>Countdown:</strong> {countdown}</p>
-                <button disabled={countdown !== '✅ Ready' || loading} onClick={claimReward}>
+                <button onClick={claimReward} disabled={countdown !== '✅ Ready' || loading}>
                   {loading ? 'Processing...' : 'Claim Reward'}
                 </button>
               </>
