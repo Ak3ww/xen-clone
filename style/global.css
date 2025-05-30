@@ -1,71 +1,74 @@
-/* global.css */
-
 body {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f9fafb;
+  background: #f4f4f4;
+  font-family: "Segoe UI", sans-serif;
   color: #111;
 }
 
-button {
-  background-color: #111;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  margin-top: 10px;
-  cursor: pointer;
-  border-radius: 4px;
+.container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+header .left {
   font-weight: bold;
-  transition: background-color 0.2s ease-in-out;
+  font-size: 1.2rem;
+}
+
+header .right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+main {
+  padding-top: 2rem;
+}
+
+.mint-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.05);
+  padding: 2rem;
+  text-align: center;
+}
+
+button {
+  background: #111;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  margin-top: 1rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
 }
 
 button:hover {
-  background-color: #333;
+  background: #333;
 }
 
-input[type='number'] {
-  padding: 8px;
-  margin-top: 10px;
-  width: 80px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-h1 {
-  margin-bottom: 10px;
-  font-size: 24px;
-}
-
-h3, h4 {
-  margin: 10px 0 5px;
-}
-
-p {
-  margin: 4px 0;
-}
-
-/* Responsive */
 @media (max-width: 600px) {
-  body {
-    padding: 10px;
+  .container {
+    padding: 0.5rem;
   }
 
-  h1 {
-    font-size: 20px;
-    text-align: center;
+  .mint-card {
+    padding: 1.5rem;
   }
 
   button {
     width: 100%;
-  }
-
-  input[type='number'] {
-    width: 100%;
-  }
-
-  .mint-box {
-    padding: 10px;
-    font-size: 14px;
   }
 }
