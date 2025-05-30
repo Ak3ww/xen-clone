@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import abi from '../abi';
 
 const CONTRACT_ADDRESS = '0x9d0bc975e1cb8895249ba11c03c08c79d158b11d';
-const SECONDS_IN_DAY = 60; // adjust to 86400 for mainnet behavior
+const SECONDS_IN_DAY = 60; // Use 86400 for mainnet
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -20,32 +20,40 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const connectWallet = async () => {
-    if (!window.ethereum) return alert("Install MetaMask");
-
-    const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
-    await web3Provider.send("eth_requestAccounts", []);
-    const signer = web3Provider.getSigner();
-    const address = await signer.getAddress();
-
-    const chainId = await web3Provider.send("eth_chainId", []);
-    if (chainId !== '0x38') {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x38' }]
-        });
-      } catch {
-        alert("Please switch to BNB Chain");
-      }
+    if (typeof window.ethereum === 'undefined') {
+      alert('MetaMask not detected');
+      return;
     }
 
-    const xen = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
-    setProvider(web3Provider);
-    setSigner(signer);
-    setWalletAddress(address);
-    setContract(xen);
+    try {
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      await web3Provider.send("eth_requestAccounts", []);
+      const signer = web3Provider.getSigner();
+      const address = await signer.getAddress();
 
-    fetchData(xen, address);
+      const chainId = await web3Provider.send("eth_chainId", []);
+      if (chainId !== '0x38') {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x38' }]
+          });
+        } catch {
+          alert("Please switch to BNB Chain");
+        }
+      }
+
+      const xen = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+      setProvider(web3Provider);
+      setSigner(signer);
+      setWalletAddress(address);
+      setContract(xen);
+
+      fetchData(xen, address);
+    } catch (err) {
+      console.error(err);
+      alert("Wallet connection failed.");
+    }
   };
 
   const disconnectWallet = () => {
