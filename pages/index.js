@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import abi from '../abi';
 
 const CONTRACT_ADDRESS = '0x9d0bc975e1cb8895249ba11c03c08c79d158b11d';
-const SECONDS_IN_DAY = 60;
+const SECONDS_IN_DAY = 60; // adjust to 86400 for mainnet behavior
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -16,6 +16,7 @@ export default function Home() {
   const [countdown, setCountdown] = useState('');
   const [termInput, setTermInput] = useState(1);
   const [rewardEstimate, setRewardEstimate] = useState('');
+  const [balance, setBalance] = useState('0');
   const [loading, setLoading] = useState(false);
 
   const connectWallet = async () => {
@@ -25,8 +26,20 @@ export default function Home() {
     await web3Provider.send("eth_requestAccounts", []);
     const signer = web3Provider.getSigner();
     const address = await signer.getAddress();
-    const xen = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
 
+    const chainId = await web3Provider.send("eth_chainId", []);
+    if (chainId !== '0x38') {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x38' }]
+        });
+      } catch {
+        alert("Please switch to BNB Chain");
+      }
+    }
+
+    const xen = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
     setProvider(web3Provider);
     setSigner(signer);
     setWalletAddress(address);
@@ -44,11 +57,15 @@ export default function Home() {
     setUserMint(null);
     setCountdown('');
     setRewardEstimate('');
+    setBalance('0');
   };
 
   const fetchData = async (xen, address) => {
     const rank = await xen.globalRank();
     setGlobalRank(rank.toString());
+
+    const bal = await xen.balanceOf(address);
+    setBalance(ethers.utils.formatEther(bal));
 
     const mint = await xen.userMints(address);
     if (mint.rank > 0) {
@@ -62,6 +79,7 @@ export default function Home() {
       });
     } else {
       setUserMint(null);
+      setRewardEstimate('');
     }
   };
 
@@ -83,29 +101,37 @@ export default function Home() {
   }, [userMint]);
 
   const claimRank = async () => {
-    if (!contract || !termInput) return;
+    if (!contract || userMint) {
+      alert("You already have an active mint.");
+      return;
+    }
     setLoading(true);
     try {
       const tx = await contract.claimRank(termInput);
       await tx.wait();
-      alert("Rank Claimed!");
+      alert("✅ Rank Claimed!");
       fetchData(contract, walletAddress);
     } catch (e) {
-      alert("Claim failed.");
+      console.error(e);
+      alert("❌ Claim failed.");
     }
     setLoading(false);
   };
 
   const claimReward = async () => {
-    if (!contract) return;
+    if (!contract || !userMint) return;
+    const now = Math.floor(Date.now() / 1000);
+    if (now < userMint.maturityTs) return alert("⏳ Not matured yet");
+
     setLoading(true);
     try {
       const tx = await contract.claimMintReward();
       await tx.wait();
-      alert("Reward Claimed!");
+      alert("✅ Reward Claimed!");
       fetchData(contract, walletAddress);
     } catch (e) {
-      alert("Claim failed.");
+      console.error(e);
+      alert("❌ Reward claim failed.");
     }
     setLoading(false);
   };
@@ -122,6 +148,7 @@ export default function Home() {
           <button onClick={disconnectWallet}>Disconnect</button>
 
           <h3>Global Rank: {globalRank ?? 'Loading...'}</h3>
+          <p>Your XEN Balance: {balance}</p>
 
           {userMint ? (
             <div style={{ marginTop: 20, border: '1px solid gray', padding: 10 }}>
@@ -133,7 +160,7 @@ export default function Home() {
               <p>Reward Estimate: {rewardEstimate} XEN</p>
 
               {countdown !== "✅ Matured" ? (
-                <button disabled>Not Matured Yet</button>
+                <button disabled>⏳ Not Matured Yet</button>
               ) : (
                 <button onClick={claimReward} disabled={loading}>
                   {loading ? 'Claiming...' : 'Claim Mint Reward'}
