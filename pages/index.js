@@ -1,204 +1,145 @@
 import { useEffect, useState } from 'react';
-import { BrowserProvider, Contract, formatEther } from 'ethers';
+import { BrowserProvider, Contract } from 'ethers';
+import styles from '../style/global.module.css';
+import abi from '../abi';
 
-const CONTRACT_ADDRESS = '0x9d0bc975e1cb8895249ba11c03c08c79d158b11d';
-const ABI = [
-  'function globalRank() view returns (uint256)',
-  'function claimRank(uint256 term) external',
-  'function claimMintReward() external',
-  'function userMints(address) view returns (uint256 term, uint256 maturityTs, uint256 rank)',
-  'function balanceOf(address) view returns (uint256)',
-];
-
-const SECONDS_IN_DAY = 60;
+const CONTRACT_ADDRESS = "0x9d0bc975e1cb8895249ba11c03c08c79d158b11d"; // your deployed XEN contract
 
 export default function Home() {
-  const [walletAddress, setWalletAddress] = useState('');
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
+  const [wallet, setWallet] = useState('');
   const [contract, setContract] = useState(null);
-
   const [globalRank, setGlobalRank] = useState(0);
-  const [mintInfo, setMintInfo] = useState(null);
-  const [balance, setBalance] = useState('0');
-  const [termInput, setTermInput] = useState('1');
-  const [status, setStatus] = useState('');
-  const [now, setNow] = useState(Date.now());
+  const [userMint, setUserMint] = useState(null);
+  const [nowTs, setNowTs] = useState(Math.floor(Date.now() / 1000));
+  const [xenBalance, setXenBalance] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  // 🟡 Connect wallet
+  // Connect Wallet
   const connectWallet = async () => {
-  if (!window.ethereum) {
-    alert("MetaMask not detected");
-    return;
-  }
-
-  try {
-    // 🟡 This triggers MetaMask popup
-    const accounts = await window.ethereum.request({
-      method: 'eth_requestAccounts',
-    });
+    if (!window.ethereum) return alert("Install MetaMask");
 
     const browserProvider = new BrowserProvider(window.ethereum);
     const signer = await browserProvider.getSigner();
     const address = await signer.getAddress();
 
-    setWalletAddress(address);
     setProvider(browserProvider);
     setSigner(signer);
-    setContract(new Contract(CONTRACT_ADDRESS, ABI, signer));
-  } catch (err) {
-    console.error("Connection failed:", err);
-    alert("Failed to connect wallet.");
-  }
-};
-
+    setWallet(address);
+    const xen = new Contract(CONTRACT_ADDRESS, abi, signer);
+    setContract(xen);
+  };
 
   const disconnectWallet = () => {
-    setWalletAddress('');
+    setWallet('');
     setProvider(null);
     setSigner(null);
     setContract(null);
-    setMintInfo(null);
-    setBalance('0');
-    setGlobalRank(0);
+    setUserMint(null);
+    setXenBalance(0);
   };
 
-  // 🕒 Clock updater
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const fetchData = async () => {
+    if (!contract || !wallet) return;
+    const [rank, mint, balance] = await Promise.all([
+      contract.globalRank(),
+      contract.userMints(wallet),
+      contract.balanceOf(wallet),
+    ]);
 
-  // 🔁 Refresh on connection
-  useEffect(() => {
-    if (!contract || !walletAddress) return;
-    fetchGlobalRank();
-    fetchUserMint();
-    fetchBalance();
-  }, [contract, walletAddress]);
-
-  const fetchGlobalRank = async () => {
-    const rank = await contract.globalRank();
-    setGlobalRank(Number(rank));
+    setGlobalRank(rank.toString());
+    setUserMint(mint.rank.toString() !== '0' ? mint : null);
+    setXenBalance(Number(balance) / 1e18);
   };
 
-  const fetchUserMint = async () => {
-    const mint = await contract.userMints(walletAddress);
-    if (mint.rank > 0) {
-      setMintInfo({
-        term: Number(mint.term),
-        maturityTs: Number(mint.maturityTs),
-        rank: Number(mint.rank),
-      });
-    } else {
-      setMintInfo(null);
-    }
-  };
-
-  const fetchBalance = async () => {
-    const bal = await contract.balanceOf(walletAddress);
-    setBalance(formatEther(bal));
-  };
-
-  const handleClaimRank = async () => {
+  const claimRank = async () => {
+    setLoading(true);
     try {
-      const tx = await contract.claimRank(Number(termInput));
+      const tx = await contract.claimRank(1); // 1 day term
       await tx.wait();
-      setStatus('✅ Rank claimed');
-      fetchGlobalRank();
-      fetchUserMint();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Failed to claim rank');
+      await fetchData();
+    } catch (e) {
+      console.error("Claim rank error", e);
     }
+    setLoading(false);
   };
 
-  const handleClaimReward = async () => {
+  const claimReward = async () => {
+    setLoading(true);
     try {
       const tx = await contract.claimMintReward();
       await tx.wait();
-      setStatus('✅ Reward claimed');
-      fetchUserMint();
-      fetchBalance();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Failed to claim reward');
+      await fetchData();
+    } catch (e) {
+      console.error("Claim reward error", e);
     }
+    setLoading(false);
   };
 
-  const timeLeft = () => {
-    if (!mintInfo) return '';
-    const secondsLeft = mintInfo.maturityTs - Math.floor(now / 1000);
-    if (secondsLeft <= 0) return 'Ready to claim!';
-    const mins = Math.floor(secondsLeft / 60);
-    const secs = secondsLeft % 60;
-    return `Matures in: ${mins}m ${secs}s`;
-  };
+  useEffect(() => {
+    if (wallet && contract) fetchData();
+  }, [wallet, contract]);
 
-  const estimatedReward = () => {
-    if (!mintInfo) return '';
-    const diff = globalRank - mintInfo.rank;
-    return `Estimated Reward: ${diff} XEN`;
-  };
+  // Timer tick
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNowTs(Math.floor(Date.now() / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const countdown = userMint ? userMint.maturityTs - nowTs : 0;
+  const isMature = countdown <= 0;
+  const rewardPreview = userMint ? (globalRank - userMint.rank) : 0;
 
   return (
-    <main style={{ maxWidth: 600, margin: '2rem auto', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ textAlign: 'center' }}>XEN Crypto Clone Dashboard</h1>
+    <div className={styles.container}>
+      <h1 className={styles.title}>XEN Crypto Clone Dashboard</h1>
 
-      <div style={{ marginBottom: '1rem' }}>
-        {!walletAddress ? (
-          <button onClick={connectWallet}>Connect Wallet</button>
-        ) : (
-          <div>
-            Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}{' '}
-            <button onClick={disconnectWallet} style={{ marginLeft: 10 }}>Disconnect</button>
+      {!wallet ? (
+        <button className={styles.connectButton} onClick={connectWallet}>Connect Wallet</button>
+      ) : (
+        <>
+          <div className={styles.wallet}>
+            Connected: {wallet.slice(0, 6)}...{wallet.slice(-4)}
+            <button className={styles.disconnectButton} onClick={disconnectWallet}>Disconnect</button>
           </div>
-        )}
-      </div>
 
-      <div style={{ marginBottom: '1rem' }}>
-        <strong>Global Rank:</strong> {globalRank}
-        <br />
-        <strong>Balance:</strong> {balance} XEN
-      </div>
+          <div className={styles.infoBox}>
+            <p><strong>Global Rank:</strong> {globalRank}</p>
+            <p><strong>Balance:</strong> {xenBalance} XEN</p>
+          </div>
 
-      {walletAddress && (
-        <div style={{ border: '1px solid #ccc', padding: 16 }}>
-          {mintInfo ? (
-            <>
-              <h3>Your Active Mint</h3>
-              <p>Rank: {mintInfo.rank}</p>
-              <p>Term: {mintInfo.term} days</p>
-              <p>Matures: {new Date(mintInfo.maturityTs * 1000).toLocaleString()}</p>
-              <p>{timeLeft()}</p>
-              <p>{estimatedReward()}</p>
-              <button
-                onClick={handleClaimReward}
-                disabled={now / 1000 < mintInfo.maturityTs}
-              >
-                Claim Mint Reward
+          {!userMint && (
+            <div className={styles.card}>
+              <h3>Claim Minting Rank</h3>
+              <p>Term: 1 days</p>
+              <button className={styles.button} onClick={claimRank} disabled={loading}>
+                {loading ? 'Claiming...' : 'Claim Rank'}
               </button>
-            </>
-          ) : (
-            <>
-              <h3>Claim New Mint</h3>
-              <input
-                type="number"
-                value={termInput}
-                onChange={(e) => setTermInput(e.target.value)}
-                style={{ padding: '0.5rem', marginRight: '1rem' }}
-              />
-              <button onClick={handleClaimRank}>Claim Rank</button>
-            </>
+            </div>
           )}
-        </div>
-      )}
 
-      {status && (
-        <p style={{ color: status.startsWith('✅') ? 'green' : 'red', marginTop: '1rem' }}>
-          {status}
-        </p>
+          {userMint && (
+            <div className={styles.card}>
+              <h3>Your Mint:</h3>
+              <p>Term: {userMint.term.toString()} days</p>
+              <p>Rank: {userMint.rank.toString()}</p>
+              <p>Matures: {new Date(userMint.maturityTs * 1000).toLocaleString()}</p>
+              <p>Matures in: {isMature ? 'Ready!' : `${Math.floor(countdown / 60)}m ${countdown % 60}s`}</p>
+              <p>Estimated Reward: {rewardPreview} XEN</p>
+              <button
+                className={styles.button}
+                onClick={claimReward}
+                disabled={!isMature || loading}
+              >
+                {loading ? 'Claiming...' : isMature ? 'Claim Reward' : 'Not Matured Yet'}
+              </button>
+            </div>
+          )}
+        </>
       )}
-    </main>
+    </div>
   );
 }
