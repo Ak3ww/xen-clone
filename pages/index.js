@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserProvider, Contract } from 'ethers';
-import styles from '../style/global.module.css';
+import styles from '../style/global.css';
 import abi from '../abi';
 
 const CONTRACT_ADDRESS = "0x9d0bc975e1cb8895249ba11c03c08c79d158b11d"; // your deployed XEN contract
