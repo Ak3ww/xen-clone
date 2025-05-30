@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XEN Minter Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>XEN Crypto (Monad Testnet)</h1>
+    <button id="connect">Connect Wallet</button>
+    <div id="wallet" class="info"></div>
+    <div id="balance" class="info"></div>
+    <div class="mint-box">
+      <label for="term">Mint Term (in days):</label>
+      <input type="number" id="term" value="1" min="1" />
+      <button id="mint">Claim Rank</button>
+    </div>
+    <button id="claim">Claim Mint Reward</button>
+    <div id="status" class="status"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
