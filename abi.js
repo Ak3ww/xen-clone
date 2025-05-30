@@ -1,60 +1,9 @@
-export const XEN_ABI = [
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [{"internalType": "uint256","name": "term","type": "uint256"}],
-    "name": "claimRank",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "claimMintReward",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "globalRank",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalSupply",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "address","name": "","type": "address"}],
-    "name": "balanceOf",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "claimMintReward",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "userMints",
-    "outputs": [
-      {"internalType": "uint256","name": "term","type": "uint256"},
-      {"internalType": "uint256","name": "maturityTs","type": "uint256"},
-      {"internalType": "uint256","name": "rank","type": "uint256"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
+// abi.js
+export const CONTRACT_ADDRESS = "0x9d0bc975e1cb8895249ba11c03c08c79d158b11d";
+
+export const CONTRACT_ABI = [
+  "function claimRank(uint256 term) external",
+  "function claimMintReward() external",
+  "function userMints(address) view returns (uint256 term, uint256 maturityTs, uint256 rank)",
+  "function globalRank() view returns (uint256)"
 ];
